@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>لوحة تحكم الإدارة - محطة الغسيل</title>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f7f6; margin: 0; padding: 15px; }
+    .dashboard { max-width: 900px; margin: 0 auto; background: white; border-radius: 16px; box-shadow: 0 6px 20px rgba(0,0,0,0.1); overflow: hidden; }
+    .header { background: linear-gradient(135deg, #f29900, #e68a00); color: white; padding: 20px; text-align: center; }
+    .top-bar { padding: 12px; display: flex; justify-content: space-between; background: #f8f9fa; border-bottom: 1px solid #eee; }
+    .order { background: #fff; border: 1px solid #eee; border-radius: 12px; padding: 15px; margin: 12px; }
+    .row { display: grid; grid-template-columns: 1fr 140px 110px; gap: 10px; align-items: center; margin-top: 10px; }
+    select, button { padding: 10px; border-radius: 8px; border: 1px solid #ddd; }
+    .save-btn { background: #34a853; color: white; border: none; font-weight: bold; }
+    .delete-btn { background: #d93025; color: white; border: none; font-weight: bold; }
+    .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #f29900; color: white; padding: 14px 20px; border-radius: 10px; z-index: 1000; display: none; }
+  </style>
+</head>
+<body>
+
+<div class="dashboard">
+  <div class="header">
+    <h1>🛠️ لوحة تحكم الإدارة</h1>
+  </div>
+
+  <div class="top-bar">
+    <button onclick="loadOrders()" style="background:#1a73e8;color:white;border:none;padding:10px 16px;border-radius:8px;">🔄 تحديث يدوي</button>
+    <a href="index.html">📱 العميل</a>
+    <a href="driver.html">🚚 السائق</a>
+  </div>
+
+  <div id="orders-list" style="padding:10px;"></div>
+</div>
+
+<div id="toast" class="toast">🔔 إشعار جديد</div>
+
+<script>
+  const firebaseConfig = {
+    databaseURL: "https://laundry-station-7eeaa-default-rtdb.europe-west1.firebasedatabase.app/"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const database = firebase.database();
+  const ADMIN_PASSWORD = "admin123";
+
+  function showToast(message) {
+    const toast = document.getElementById('toast');
+    toast.textContent = message;
+    toast.style.display = 'block';
+    setTimeout(() => toast.style.display = 'none', 3000);
+  }
+
+  // تصحيح دالة القائمة المنسدلة
+  function getStatusOptions(selected) {
+    const statuses = ["قيد الانتظار", "تم الاستلام", "قيد الغسيل", "في الطريق", "مكتمل", "ملغي"];
+    return statuses.map(s => `<option value="${s}" ${s === selected ? "selected" : ""}>${s}</option>`).join("");
+  }
+
+  function renderOrders(data) {
+    const container = document.getElementById('orders-list');
+    if (!data) {
+      container.innerHTML = "<p style='text-align:center;padding:40px;'>لا توجد طلبات</p>";
+      return;
+    }
+    let html = '';
+    Object.keys(data).reverse().forEach((id) => {
+      const o = data[id];
+      html += `
+        <div class="order">
+          <p><strong>العميل:</strong> ${o.phone}</p>
+          <p><strong>الحالة:</strong> ${o.status}</p>
+          <div class="row">
+            <select id="status-${id}">${getStatusOptions(o.status)}</select>
+            <button class="save-btn" onclick="updateStatus('${id}')">حفظ</button>
+            <button class="delete-btn" onclick="deleteOrder('${id}')">حذف</button>
+          </div>
+        </div>`;
+    });
+    container.innerHTML = html;
+  }
+
+  function loadOrders() {
+    database.ref('orders').once('value').then(snapshot => renderOrders(snapshot.val()));
+  }
+
+  function updateStatus(orderId) {
+    const status = document.getElementById(`status-${orderId}`).value;
+    database.ref('orders/' + orderId).update({ status: status }).then(() => showToast("✅ تم التحديث"));
+  }
+
+  function deleteOrder(orderId) {
+    database.ref('orders/' + orderId).remove().then(() => showToast("🗑️ تم الحذف"));
+  }
+
+  // الإشعارات والتحديث التلقائي
+  database.ref('orders').on('child_added', () => { showToast("🔔 طلب جديد!"); loadOrders(); });
+  database.ref('orders').on('child_changed', () => { showToast("🔄 تم تغيير حالة طلب"); loadOrders(); });
+  database.ref('orders').on('child_removed', () => { showToast("🗑️ تم حذف طلب"); loadOrders(); });
+
+  window.onload = () => {
+    const pass = prompt("🔑 كلمة مرور الإدارة:");
+    if (pass === ADMIN_PASSWORD) loadOrders();
+    else { alert("خطأ!"); window.location.href = "index.html"; }
+  };
+</script>
+</body>
+</html>

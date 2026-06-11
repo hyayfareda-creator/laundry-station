@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>واجهة العميل - محطة الغسيل</title>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <style>
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f4f7f6; margin: 0; min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; }
+    .card { background: #fff; width: 100%; max-width: 450px; padding: 28px; border-radius: 14px; box-shadow: 0 4px 14px rgba(0,0,0,.1); text-align: center; }
+    h2 { color: #1a73e8; margin-bottom: 20px; }
+    input, select, button { width: 100%; padding: 13px; margin: 10px 0; border-radius: 8px; border: 1px solid #ccc; box-sizing: border-box; font-size: 16px; }
+    button { border: none; background: #1a73e8; color: #fff; font-weight: bold; cursor: pointer; padding: 14px; }
+    .msg { color: #28a745; min-height: 24px; margin-top: 12px; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>📱 واجهة العميل</h2>
+
+    <input type="tel" id="phone" placeholder="رقم الهاتف (مثال: 965xxxxxxxx)">
+    <label>اختر السائق:</label>
+    <select id="driver">
+      <option value="صفوان">صفوان</option>
+      <option value="علاء">علاء</option>
+      <option value="نعيم">نعيم</option>
+    </select>
+    <input type="text" id="address" placeholder="اكتب العنوان بالتفصيل">
+    <button onclick="sendOrder()">📤 إرسال الطلب</button>
+
+    <div class="msg" id="msg"></div>
+  </div>
+
+  <script>
+    const firebaseConfig = { databaseURL: "https://laundry-station-7eeaa-default-rtdb.europe-west1.firebasedatabase.app/" };
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+
+    function sendOrder() {
+      const phone = document.getElementById('phone').value.trim();
+      const driver = document.getElementById('driver').value;
+      const address = document.getElementById('address').value.trim();
+      const msg = document.getElementById('msg');
+
+      if (!phone || !address) return alert('يرجى ملء رقم الهاتف والعنوان');
+
+      const orderId = "order_" + Date.now();
+      database.ref('orders/' + orderId).set({
+        phone: phone,
+        driver: driver,
+        address: address,
+        status: "قيد الانتظار",
+        timestamp: new Date().toLocaleString('ar-KW')
+      }).then(() => {
+        msg.innerHTML = `✅ تم إرسال الطلب!<br>رقم الطلب: <strong>${orderId}</strong>`;
+        document.getElementById('address').value = "";
+      });
+    }
+  </script>
+</body>
+</html>
